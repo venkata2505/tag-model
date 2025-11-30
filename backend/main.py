@@ -1,4 +1,4 @@
-from models import SessionLocal, Tag, Product, SaleOrder, SaleOrderDetail
+from .models import SessionLocal, Tag, Product, SaleOrder, SaleOrderDetail
 from datetime import datetime
 
 # TAG MODEL
