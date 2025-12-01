@@ -1,7 +1,8 @@
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from .models import SessionLocal, Tag, Product, SaleOrder, SaleOrderDetail
+from pydantic import BaseModel
 
 app = FastAPI()
 app.add_middleware(
@@ -10,6 +11,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class AddItemRequest(BaseModel):
+    product_id: int
+    qty: int
 
 @app.post("/tags")
 def create_tag(data: dict):
@@ -205,38 +210,41 @@ def delete_order(order_id: int):
     return {"message": "Order deleted"}
 
 @app.post("/orders/{order_id}/items")
-def add_item(order_id: int, data: dict):
-    qty = data["qty"]
-    product_id = data["product_id"]
-
+def add_item(order_id: int, data: AddItemRequest):
     with SessionLocal() as session:
         order = session.query(SaleOrder).filter_by(id=order_id).first()
-        product = session.query(Product).filter_by(id=product_id).first()
+        product = session.query(Product).filter_by(id=data.product_id).first()
 
         if not order or not product:
             raise HTTPException(404, "Order or Product not found")
 
-        if qty > product.stock_qty:
+        if data.qty > product.stock_qty:
             raise HTTPException(400, "Not enough stock")
 
-        subtotal = product.price * qty
+        subtotal = product.price * data.qty
 
-        detail = SaleOrderDetail(
-            sale_order_id=order.id,
-            product_id=product.id,
-            qty=qty,
-            price=product.price,
-            subtotal=subtotal
-        )
+        # Use a transaction to avoid partial updates
+        try:
+            product.stock_qty -= data.qty
 
-        product.stock_qty -= qty
-        session.add(detail)
-        session.commit()
+            detail = SaleOrderDetail(
+                sale_order_id=order.id,
+                product_id=product.id,
+                qty=data.qty,
+                price=product.price,
+                subtotal=subtotal
+            )
+            session.add(detail)
+            session.commit()
 
-        # UPDATE TOTAL
-        total = session.query(SaleOrderDetail).filter_by(sale_order_id=order.id).all()
-        order.total_amount = sum(d.subtotal for d in total)
-        session.commit()
+            # Update total
+            total = session.query(SaleOrderDetail).filter_by(sale_order_id=order.id).all()
+            order.total_amount = sum(d.subtotal for d in total)
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            raise HTTPException(500, f"Internal Server Error: {str(e)}")
 
     return {"message": "Item added", "order_total": order.total_amount}
 

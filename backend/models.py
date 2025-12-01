@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker, relationship
@@ -91,8 +91,8 @@ class SaleOrderDetail(Base):
     sale_order_id = Column(Integer, ForeignKey("sale_orders.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     qty = Column(Integer, nullable=False)
-    price = Column(Integer, nullable=False)  
-    subtotal = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    subtotal = Column(Float, nullable=False)
 
     # Relationships
     sale_order = relationship("SaleOrder", back_populates="details")
