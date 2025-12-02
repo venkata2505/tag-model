@@ -13,12 +13,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Request schemas ---
 class AddItemRequest(BaseModel):
     product_id: int
     qty: int
 
-# --- Response schemas ---
 class OrderItemResponse(BaseModel):
     product_id: int
     qty: int
@@ -39,7 +37,6 @@ class OrderResponse(BaseModel):
     class Config:
         orm_mode = True
 
-# ---------------- TAGS ----------------
 @app.post("/tags")
 def create_tag(data: dict):
     with SessionLocal() as session:
@@ -88,7 +85,6 @@ def delete_tag(tag_id: int):
         session.commit()
     return {"message": "Tag deleted"}
 
-# ---------------- PRODUCTS ----------------
 @app.post("/products")
 def create_product(data: dict):
     with SessionLocal() as session:
@@ -167,7 +163,6 @@ def remove_tag_from_product(product_id: int, tag_id: int):
         session.commit()
     return {"message": "Tag removed from product"}
 
-# ---------------- ORDERS ----------------
 @app.post("/orders")
 def create_sale_order(data: dict):
     with SessionLocal() as session:
