@@ -246,7 +246,7 @@ def add_item(order_id: int, data: AddItemRequest):
             session.rollback()
             raise HTTPException(500, f"Internal Server Error: {str(e)}")
 
-    return {"message": "Item added", "order_total": order.total_amount}
+    return {"message": "Item added", "order": order.as_dict()}
 
 @app.post("/orders/{order_id}/tags/{tag_id}")
 def assign_tag_to_order(order_id: int, tag_id: int):
