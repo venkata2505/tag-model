@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CRUD API Frontend</title>
+</head>
+<body>
+  <h1>CRUD API Example</h1>
+
+  <!-- TAGS -->
+  <h2>Tags</h2>
+  <input id="tagValue" placeholder="Value">
+  <input id="tagType" placeholder="Type">
+  <input id="tagColor" placeholder="Color">
+  <input id="tagDesc" placeholder="Description">
+  <button onclick="createTag()">Add Tag</button>
+  <button onclick="loadTags()">Load Tags</button>
+  <ul id="tagList"></ul>
+
+  <!-- PRODUCTS -->
+  <h2>Products</h2>
+  <input id="prodName" placeholder="Name">
+  <input id="prodSKU" placeholder="SKU">
+  <input id="prodPrice" placeholder="Price">
+  <input id="prodStock" placeholder="Stock Qty">
+  <button onclick="createProduct()">Add Product</button>
+  <button onclick="loadProducts()">Load Products</button>
+  <ul id="productList"></ul>
+
+  <!-- ORDERS -->
+  <h2>Orders</h2>
+  <input id="orderCustomer" placeholder="Customer Name">
+  <button onclick="createOrder()">Create Order</button>
+  <button onclick="loadOrders()">Load Orders</button>
+  <ul id="orderList"></ul>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+
+    async function req(path, options={}) {
+      const res = await fetch(API + path, options);
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    // TAGS
+    async function loadTags() {
+      const tags = await req('/tags');
+      const list = document.getElementById('tagList');
+      list.innerHTML = '';
+      tags.forEach(t => {
+        const li = document.createElement('li');
+        li.textContent = `${t.id} - ${t.value} (${t.type_}) [${t.color}]`;
+        list.appendChild(li);
+      });
+    }
+
+    async function createTag() {
+      const value = document.getElementById('tagValue').value;
+      const type_ = document.getElementById('tagType').value;
+      const color = document.getElementById('tagColor').value;
+      const description = document.getElementById('tagDesc').value;
+      await req('/tags', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ value, type_, color, description })
+      });
+      loadTags();
+    }
+
+    // PRODUCTS
+    async function loadProducts() {
+      const prods = await req('/products');
+      const list = document.getElementById('productList');
+      list.innerHTML = '';
+      prods.forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = `${p.id} - ${p.name} | SKU: ${p.sku} | Price: ${p.price} | Stock: ${p.stock_qty}`;
+        list.appendChild(li);
+      });
+    }
+
+    async function createProduct() {
+      const name = document.getElementById('prodName').value;
+      const sku = document.getElementById('prodSKU').value;
+      const price = parseFloat(document.getElementById('prodPrice').value);
+      const stock_qty = parseInt(document.getElementById('prodStock').value);
+      await req('/products', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, sku, price, stock_qty })
+      });
+      loadProducts();
+    }
+
+    // ORDERS
+    async function loadOrders() {
+      const orders = await req('/orders');
+      const list = document.getElementById('orderList');
+      list.innerHTML = '';
+      orders.forEach(o => {
+        const li = document.createElement('li');
+        li.textContent = `${o.id} - Customer: ${o.customer_name} | Total: ${o.total_amount}`;
+        list.appendChild(li);
+      });
+    }
+
+    async function createOrder() {
+      const customer_name = document.getElementById('orderCustomer').value;
+      await req('/orders', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ customer_name })
+      });
+      loadOrders();
+    }
+
+    // Initial load
+    loadTags();
+    loadProducts();
+    loadOrders();
+  </script>
+</body>
+</html>
