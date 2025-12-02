@@ -16,6 +16,16 @@ class AddItemRequest(BaseModel):
     product_id: int
     qty: int
 
+class OrderResponse(BaseModel):
+    id: int
+    customer_name: str
+    total_amount: float
+    status: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
 @app.post("/tags")
 def create_tag(data: dict):
     with SessionLocal() as session:
@@ -209,24 +219,27 @@ def delete_order(order_id: int):
 
     return {"message": "Order deleted"}
 
-@app.post("/orders/{order_id}/items")
+@app.post("/orders/{order_id}/items", response_model=OrderResponse)
 def add_item(order_id: int, data: AddItemRequest):
     with SessionLocal() as session:
+        # Fetch order and product
         order = session.query(SaleOrder).filter_by(id=order_id).first()
         product = session.query(Product).filter_by(id=data.product_id).first()
 
-        if not order or not product:
-            raise HTTPException(404, "Order or Product not found")
-
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
         if data.qty > product.stock_qty:
-            raise HTTPException(400, "Not enough stock")
+            raise HTTPException(status_code=400, detail="Not enough stock")
 
         subtotal = product.price * data.qty
 
-        # Use a transaction to avoid partial updates
         try:
+            # Deduct stock
             product.stock_qty -= data.qty
 
+            # Add order detail
             detail = SaleOrderDetail(
                 sale_order_id=order.id,
                 product_id=product.id,
@@ -237,16 +250,17 @@ def add_item(order_id: int, data: AddItemRequest):
             session.add(detail)
             session.commit()
 
-            # Update total
-            total = session.query(SaleOrderDetail).filter_by(sale_order_id=order.id).all()
-            order.total_amount = sum(d.subtotal for d in total)
+            # Update total_amount
+            total_details = session.query(SaleOrderDetail).filter_by(sale_order_id=order.id).all()
+            order.total_amount = sum(d.subtotal for d in total_details)
             session.commit()
 
         except Exception as e:
             session.rollback()
-            raise HTTPException(500, f"Internal Server Error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
-    return {"message": "Item added", "order": order.as_dict()}
+        # Return the order directly; Pydantic converts it to JSON
+        return order
 
 @app.post("/orders/{order_id}/tags/{tag_id}")
 def assign_tag_to_order(order_id: int, tag_id: int):
